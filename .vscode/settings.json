@@ -1,0 +1,19 @@
+{
+    // 使用 Isaac Sim 内置的 Python 解释器
+    "python.defaultInterpreterPath": "C:\\IsaacSim\\kit\\python\\python.exe",
+    
+    // 配置 Pylance 的额外搜索路径，确保智能提示和跳转正常工作
+    "python.analysis.extraPaths": [
+        "C:\\IsaacSim\\site",
+        "C:\\IsaacSim\\python_packages",
+        "C:\\IsaacSim\\exts\\isaacsim.core.api",
+        "C:\\IsaacSim\\exts\\isaacsim.core.utils",
+        "C:\\IsaacSim\\exts\\isaacsim.core.prims",
+        // Isaac Lab 路径
+        "C:\\IsaacLab\\source\\isaaclab",
+        "C:\\IsaacLab\\source\\isaaclab_assets",
+        "C:\\IsaacLab\\source\\isaaclab_tasks",
+        "C:\\IsaacLab\\source\\isaaclab_rl"
+    ],
+    "python.analysis.typeCheckingMode": "off"
+}
