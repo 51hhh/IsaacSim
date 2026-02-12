@@ -1,0 +1,527 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- This URDF was automatically created by SolidWorks to URDF Exporter! Originally created by Stephen Brawner (brawner@gmail.com) 
+     Commit Version: 1.6.0-4-g7f85cfe  Build Version: 1.6.7995.38578
+     For more information, please see http://wiki.ros.org/sw_urdf_exporter -->
+<robot
+  name="N4">
+  <link name="base_link"/>
+
+<!-- 2. 用一个 fixed 关节把 body 连在 base_link 上 -->
+<joint name="virtual_joint" type="fixed">
+  <parent link="base_link"/>
+  <child link="body"/>
+  <origin xyz="0 0 0" rpy="0 0 0"/>
+</joint>
+  <link
+    name="body">
+    <inertial>
+      <origin
+        xyz="0 0 0.0378841261362945"
+        rpy="0 0 0" />
+      <mass
+        value="16.2401302143576" />
+      <inertia
+        ixx="1.00866947049631"
+        ixy="0"
+        ixz="0"
+        iyy="1.02437247049631"
+        iyz="0"
+        izz="1.97949189323505" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://N4/meshes/body.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://N4/meshes/body.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <link
+    name="6020FL">
+    <inertial>
+      <origin
+        xyz="0.0122555607739784 0 -0.0460182765859516"
+        rpy="0 0 0" />
+      <mass
+        value="0.234446139501678" />
+      <inertia
+        ixx="0.000289619323760121"
+        ixy="0"
+        ixz="0"
+        iyy="0.000289616691925895"
+        iyz="0"
+        izz="0.000281847941925895" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://N4/meshes/6020FL.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://N4/meshes/6020FL.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="FL"
+    type="continuous">
+    <origin
+      xyz="-0.32 0.315 0"
+      rpy="-3.1416 0 3.1416" />
+    <parent
+      link="body" />
+    <child
+      link="6020FL" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      effort="1.2"
+      velocity="30" />
+    <dynamics
+      damping="0.05"
+      friction="0.1" />
+  </joint>
+  <link
+    name="3508FL">
+    <inertial>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <mass
+        value="0.285099533313274" />
+      <inertia
+        ixx="0.000236988987066659"
+        ixy="0"
+        ixz="0"
+        iyy="0.000236988987066659"
+        iyz="0"
+        izz="0.000431213044136327" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://N4/meshes/3508FL.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://N4/meshes/3508FL.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="FLW"
+    type="continuous">
+    <origin
+      xyz="0 0 -0.0279"
+      rpy="-1.5708 0 1.5708" />
+    <parent
+      link="6020FL" />
+    <child
+      link="3508FL" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      effort="8"
+      velocity="50" />
+    <dynamics
+      damping="0.02"
+      friction="0.05" />
+  </joint>
+  <link
+    name="6020FB">
+    <inertial>
+      <origin
+        xyz="-0.0122555607739784 0 -0.0460182765859516"
+        rpy="0 0 0" />
+      <mass
+        value="0.234446139501678" />
+      <inertia
+        ixx="0.000289619323760121"
+        ixy="0"
+        ixz="0"
+        iyy="0.000289616691925895"
+        iyz="0"
+        izz="0.000281847941925895" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://N4/meshes/6020FB.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://N4/meshes/6020FB.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="FB"
+    type="continuous">
+    <origin
+      xyz="-0.32 -0.315 0"
+      rpy="3.1416 0 0" />
+    <parent
+      link="body" />
+    <child
+      link="6020FB" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      effort="1.2"
+      velocity="30" />
+    <dynamics
+      damping="0.05"
+      friction="0.1" />
+  </joint>
+  <link
+    name="3508FB">
+    <inertial>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <mass
+        value="0.285099533313274" />
+      <inertia
+        ixx="0.000236988987066659"
+        ixy="0"
+        ixz="0"
+        iyy="0.000236988987066659"
+        iyz="0"
+        izz="0.000431213044136326" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://N4/meshes/3508FB.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://N4/meshes/3508FB.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="FBW"
+    type="continuous">
+    <origin
+      xyz="0 0 -0.0279"
+      rpy="1.5708 0 1.5708" />
+    <parent
+      link="6020FB" />
+    <child
+      link="3508FB" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      effort="8"
+      velocity="50" />
+    <dynamics
+      damping="0.02"
+      friction="0.05" />
+  </joint>
+  <link
+    name="6020RB">
+    <inertial>
+      <origin
+        xyz="-0.0122555607739784 0 -0.0460182765859517"
+        rpy="0 0 0" />
+      <mass
+        value="0.234446139501678" />
+      <inertia
+        ixx="0.000289619323760121"
+        ixy="0"
+        ixz="0"
+        iyy="0.000289616691925895"
+        iyz="0"
+        izz="0.000281847941925895" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://N4/meshes/6020RB.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://N4/meshes/6020RB.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="RB"
+    type="continuous">
+    <origin
+      xyz="0.32 0.315 0"
+      rpy="-3.1416 0 3.1416" />
+    <parent
+      link="body" />
+    <child
+      link="6020RB" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      effort="1.2"
+      velocity="30" />
+    <dynamics
+      damping="0.05"
+      friction="0.1" />
+  </joint>
+  <link
+    name="3508RB">
+    <inertial>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <mass
+        value="0.285099533313274" />
+      <inertia
+        ixx="0.000236988987066659"
+        ixy="0"
+        ixz="0"
+        iyy="0.000236988987066659"
+        iyz="0"
+        izz="0.000431213044136327" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://N4/meshes/3508RB.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://N4/meshes/3508RB.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="RBW"
+    type="continuous">
+    <origin
+      xyz="0 0 -0.0279"
+      rpy="-1.5708 0 1.5708" />
+    <parent
+      link="6020RB" />
+    <child
+      link="3508RB" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      effort="8"
+      velocity="50" />
+    <dynamics
+      damping="0.02"
+      friction="0.05" />
+  </joint>
+  <link
+    name="6020RL">
+    <inertial>
+      <origin
+        xyz="0.0122555607739783 0 -0.0460182765859517"
+        rpy="0 0 0" />
+      <mass
+        value="0.234446139501678" />
+      <inertia
+        ixx="0.000289619323760121"
+        ixy="0"
+        ixz="0"
+        iyy="0.000289616691925895"
+        iyz="0"
+        izz="0.000281847941925895" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://N4/meshes/6020RL.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://N4/meshes/6020RL.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="RL"
+    type="continuous">
+    <origin
+      xyz="0.32 -0.315 0"
+      rpy="3.1416 0 0" />
+    <parent
+      link="body" />
+    <child
+      link="6020RL" />
+    <axis
+      xyz="0 0 -1" />
+    <limit
+      effort="1.2"
+      velocity="30" />
+    <dynamics
+      damping="0.05"
+      friction="0.1" />
+  </joint>
+  <link
+    name="3508RL">
+    <inertial>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <mass
+        value="0.285099533313274" />
+      <inertia
+        ixx="0.000236988987066659"
+        ixy="0"
+        ixz="0"
+        iyy="0.000236988987066659"
+        iyz="0"
+        izz="0.000431213044136327" />
+    </inertial>
+    <visual>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://N4/meshes/3508RL.STL" />
+      </geometry>
+      <material
+        name="">
+        <color
+          rgba="0.792156862745098 0.819607843137255 0.933333333333333 1" />
+      </material>
+    </visual>
+    <collision>
+      <origin
+        xyz="0 0 0"
+        rpy="0 0 0" />
+      <geometry>
+        <mesh
+          filename="package://N4/meshes/3508RL.STL" />
+      </geometry>
+    </collision>
+  </link>
+  <joint
+    name="RLW"
+    type="continuous">
+    <origin
+      xyz="0 0 -0.0279"
+      rpy="1.5708 0 1.5708" />
+    <parent
+      link="6020RL" />
+    <child
+      link="3508RL" />
+    <axis
+      xyz="0 0 1" />
+    <limit
+      effort="8"
+      velocity="50" />
+    <dynamics
+      damping="0.02"
+      friction="0.05" />
+  </joint>
+</robot>

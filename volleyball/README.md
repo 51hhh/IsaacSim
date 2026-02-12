@@ -48,14 +48,81 @@ cd volleyball
 C:\IsaacSim\python.bat volleyball_simple.py
 ```
 
+## 接球 RL 训练
+
+### 任务描述
+
+舵轮底盘移动到排球落点位置接球。
+
+| 组件 | 设计 |
+|------|------|
+| **观察空间** (8D) | 预测落点(x,y) + 到达时间 + 底盘位置(x,y) + 速度(vx,vy) + 球高度 |
+| **动作空间** (2D) | 底盘速度指令 (vx, vy)，范围 [-1, 1] |
+| **接球奖励** | +100 |
+| **未接住惩罚** | -10 - 距离×2 |
+| **终止条件** | 排球触底 / 接住球 / 超时(6s) |
+
+### 运行接球环境
+
+```bash
+# 测试（URDF舵轮底盘）
+C:\IsaacSim\python.bat run_catch_rl.py --test
+
+# 安装rsl_rl
+cd rsl_rl
+C:\IsaacSim\python.bat -m pip install -e .
+
+# PPO训练
+C:\IsaacSim\python.bat run_catch_rl.py --train
+
+# 更多参数
+C:\IsaacSim\python.bat run_catch_rl.py --help
+```
+
+### 落点预测
+
+使用欧拉积分 + 空气阻力估算球在机器人高度 (0.1m) 处的落点和到达时间：
+
+```python
+def predict_landing_point(ball_pos, ball_vel, target_height):
+    # 积分公式: a = g + drag, v += a*dt, pos += v*dt
+    # 当 pos.z <= target_height 时返回 (x, y, time)
+```
+
 ## 文件结构
 
 ```
 volleyball/
-├── volleyball_simple.py           # 排球仿真主脚本
-├── VOLLEYBALL_PHYSICS_MODEL.md    # 物理模型设计文档（含参考文献）
+├── volleyball_simple.py           # 排球仿真主脚本（独立运行）
+├── run_catch_rl.py                # 接球 RL 运行入口
+├── modules/                       # 模块化组件
+│   ├── __init__.py
+│   ├── volleyball_physics.py      # 排球空气动力学模型
+│   ├── volleyball_court.py        # 场地创建模块
+│   ├── swerve_robot.py            # URDF舵轮底盘
+│   └── catch_env.py               # 接球 Gymnasium 环境
+├── VOLLEYBALL_PHYSICS_MODEL.md    # 物理模型设计文档
 └── README.md                      # 本文件
 ```
+
+## 模块说明
+
+### volleyball_physics.py
+
+- `VolleyballAerodynamics`: 空气动力学计算（阻力、马格努斯力、飘球）
+- `VolleyballRigidBody`: 排球刚体封装
+- `generate_serve()`: 发球生成
+- `predict_landing_point()`: 落点预测
+
+### volleyball_court.py
+
+- `VolleyballCourt`: 完整排球场（地面、球网、边线）
+- `SimpleCourt`: 简化场地（仅地面，用于训练）
+
+### swerve_robot.py
+
+- `SwerveRobot`: URDF舵轮底盘加载与控制
+- `SwerveKinematics`: 四轮舵轮运动学
 
 ## 参考文献
 
