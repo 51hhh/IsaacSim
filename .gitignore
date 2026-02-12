@@ -1,4 +1,5 @@
 isaac-lab-circular-cartpole/
 WheeledLab/
+logs/
 
 *.log
