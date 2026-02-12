@@ -1,0 +1,61 @@
+runner:
+  actor:
+    activation: elu
+    class_name: MLPModel
+    hidden_dims:
+    - 128
+    - 128
+    init_noise_std: 0.5
+    noise_std_type: scalar
+    obs_normalization: true
+    state_dependent_std: false
+    stochastic: true
+  algorithm:
+    class_name: PPO
+    clip_param: 0.2
+    desired_kl: 0.01
+    entropy_coef: 0.01
+    gamma: 0.99
+    lam: 0.95
+    learning_rate: 0.0003
+    max_grad_norm: 1.0
+    normalize_advantage_per_mini_batch: false
+    num_learning_epochs: 5
+    num_mini_batches: 4
+    optimizer: adam
+    rnd_cfg:
+      learning_rate: 0.001
+      num_outputs: 1
+      predictor_hidden_dims:
+      - -1
+      reward_normalization: false
+      target_hidden_dims:
+      - -1
+      weight: 0.0
+      weight_schedule: null
+    schedule: adaptive
+    symmetry_cfg: null
+    use_clipped_value_loss: true
+    value_loss_coef: 1.0
+  class_name: OnPolicyRunner
+  critic:
+    activation: elu
+    class_name: MLPModel
+    hidden_dims:
+    - 128
+    - 128
+    obs_normalization: true
+    stochastic: false
+  experiment_name: volleyball_catch
+  logger: tensorboard
+  max_iterations: 5
+  num_steps_per_env: 24
+  obs_groups:
+    actor:
+    - policy
+    critic:
+    - policy
+  run_name: ''
+  save_interval: 100
+  seed: 42
+  wandb_project: volleyball_catch

@@ -45,6 +45,7 @@ def parse_args():
     parser.add_argument("--headless", action="store_true", help="Run without rendering")
     parser.add_argument("--episodes", type=int, default=50, help="Number of episodes for testing")
     parser.add_argument("--max_iterations", type=int, default=5000, help="Max training iterations")
+    parser.add_argument("--num_envs", type=int, default=1, help="Number of parallel environments")
     parser.add_argument("--device", type=str, default="cuda:0", help="PyTorch device")
     return parser.parse_args()
 
@@ -163,9 +164,6 @@ def run_train(args):
         "renderer": "RaytracedLighting"
     })
     
-    from modules.catch_env import VolleyballCatchEnv
-    from modules.rsl_rl_wrapper import GymToRslRlWrapper
-    
     print("=" * 70)
     print("  排球接球 RL 训练 (RSL-RL PPO)")
     print("=" * 70)
@@ -173,22 +171,44 @@ def run_train(args):
     print(f"  机器人: URDF 舵轮底盘 (N4)")
     print(f"  框架: RSL-RL (ETH RSL)")
     print(f"  设备: {args.device}")
+    print(f"  并行环境数: {args.num_envs}")
     print(f"  最大迭代: {args.max_iterations}")
     print("-" * 70)
     
-    # 创建 Gymnasium 环境 (训练时默认不打印 Episode 详细信息)
-    gym_env = VolleyballCatchEnv(
-        simulation_app=simulation_app,
-        render_mode="human" if not args.headless else None,
-        verbose=False
-    )
-    
-    # 包装为 RSL-RL VecEnv
-    env = GymToRslRlWrapper(
-        gym_env=gym_env,
-        device=args.device,
-        max_episode_length=120,  # 6s at 20Hz
-    )
+    # 根据环境数量选择环境类
+    if args.num_envs > 1:
+        from modules.catch_env_multi import VolleyballCatchMultiEnv, MultiEnvVecEnvWrapper
+        
+        # 创建多环境
+        multi_env = VolleyballCatchMultiEnv(
+            simulation_app=simulation_app,
+            render_mode="human" if not args.headless else None,
+            num_envs=args.num_envs,
+            device=args.device,
+            verbose=False
+        )
+        
+        # 包装为 RSL-RL VecEnv
+        env = MultiEnvVecEnvWrapper(multi_env)
+        gym_env = multi_env  # 用于获取统计
+        
+    else:
+        from modules.catch_env import VolleyballCatchEnv
+        from modules.rsl_rl_wrapper import GymToRslRlWrapper
+        
+        # 创建 Gymnasium 环境 (训练时默认不打印 Episode 详细信息)
+        gym_env = VolleyballCatchEnv(
+            simulation_app=simulation_app,
+            render_mode="human" if not args.headless else None,
+            verbose=False
+        )
+        
+        # 包装为 RSL-RL VecEnv
+        env = GymToRslRlWrapper(
+            gym_env=gym_env,
+            device=args.device,
+            max_episode_length=120,  # 6s at 20Hz
+        )
     
     # 日志目录
     log_root = os.path.join(os.path.dirname(__file__), "logs", "rsl_rl", "volleyball_catch")

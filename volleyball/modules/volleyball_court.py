@@ -57,7 +57,9 @@ class VolleyballCourt:
                  court_length: float = DEFAULT_COURT_LENGTH,
                  court_width: float = DEFAULT_COURT_WIDTH,
                  net_height: float = DEFAULT_NET_HEIGHT,
-                 enable_net_collision: bool = False):
+                 enable_net_collision: bool = False,
+                 prim_prefix: str = "/World",
+                 origin: tuple = (0.0, 0.0, 0.0)):
         """
         初始化场地
         
@@ -67,23 +69,35 @@ class VolleyballCourt:
             court_width: 场地宽度 (Y方向)
             net_height: 球网高度
             enable_net_collision: 是否启用球网物理碰撞
+            prim_prefix: USD prim 路径前缀（用于多环境实例）
+            origin: 场地原点偏移 (x, y, z)
         """
         self.stage = stage
         self.court_length = court_length
         self.court_width = court_width
         self.net_height = net_height
         self.enable_net_collision = enable_net_collision
+        self.prim_prefix = prim_prefix
+        self.origin = origin
         
         self._materials = {}
     
-    def setup_all(self):
-        """一键设置完整场地"""
-        print("[VolleyballCourt] Setting up physics scene...")
-        self.setup_physics_scene()
-        print("[VolleyballCourt] Setting up lighting...")
-        self.setup_environment()
-        print("[VolleyballCourt] Creating ground plane...")
-        self.create_ground()
+    def setup_all(self, create_physics_scene: bool = True, create_ground: bool = True):
+        """
+        一键设置完整场地
+        
+        Args:
+            create_physics_scene: 是否创建物理场景（多环境时只需第一个创建）
+            create_ground: 是否创建地面（多环境时只需第一个创建）
+        """
+        if create_physics_scene:
+            print("[VolleyballCourt] Setting up physics scene...")
+            self.setup_physics_scene()
+            print("[VolleyballCourt] Setting up lighting...")
+            self.setup_environment()
+        if create_ground:
+            print("[VolleyballCourt] Creating ground plane...")
+            self.create_ground()
         print(f"[VolleyballCourt] Creating court surface ({self.court_length}m x {self.court_width}m)...")
         self.create_court_surface()
         print("[VolleyballCourt] Creating court lines...")
@@ -180,11 +194,12 @@ class VolleyballCourt:
     
     def create_court_surface(self):
         """创建球场地面（视觉+碰撞）"""
-        court = UsdGeom.Cube.Define(self.stage, Sdf.Path("/World/Court"))
+        court = UsdGeom.Cube.Define(self.stage, Sdf.Path(f"{self.prim_prefix}/Court"))
         court.CreateSizeAttr(1.0)
         
+        ox, oy, oz = self.origin
         xf = UsdGeom.Xformable(court)
-        xf.AddTranslateOp().Set(Gf.Vec3d(0, 0, 0.005))
+        xf.AddTranslateOp().Set(Gf.Vec3d(ox, oy, oz + 0.005))
         xf.AddScaleOp().Set(Gf.Vec3f(self.court_length, self.court_width, 0.01))
         
         # 视觉材质（木地板色）
@@ -204,17 +219,18 @@ class VolleyballCourt:
         """创建球场边线"""
         line_mat = self._create_visual_material("LineMat", (1.0, 1.0, 1.0), roughness=0.9)
         lw = 0.05
+        ox, oy, oz = self.origin
         
         lines = [
-            ("LineN", (0, self.court_width/2, 0.015), (self.court_length, lw, 0.005)),
-            ("LineS", (0, -self.court_width/2, 0.015), (self.court_length, lw, 0.005)),
-            ("LineE", (self.court_length/2, 0, 0.015), (lw, self.court_width, 0.005)),
-            ("LineW", (-self.court_length/2, 0, 0.015), (lw, self.court_width, 0.005)),
-            ("LineMid", (0, 0, 0.015), (lw, self.court_width, 0.005)),
+            ("LineN", (ox, oy + self.court_width/2, oz + 0.015), (self.court_length, lw, 0.005)),
+            ("LineS", (ox, oy - self.court_width/2, oz + 0.015), (self.court_length, lw, 0.005)),
+            ("LineE", (ox + self.court_length/2, oy, oz + 0.015), (lw, self.court_width, 0.005)),
+            ("LineW", (ox - self.court_length/2, oy, oz + 0.015), (lw, self.court_width, 0.005)),
+            ("LineMid", (ox, oy, oz + 0.015), (lw, self.court_width, 0.005)),
         ]
         
         for name, pos, scale in lines:
-            line = UsdGeom.Cube.Define(self.stage, Sdf.Path(f"/World/{name}"))
+            line = UsdGeom.Cube.Define(self.stage, Sdf.Path(f"{self.prim_prefix}/{name}"))
             line.CreateSizeAttr(1.0)
             xf = UsdGeom.Xformable(line)
             xf.AddTranslateOp().Set(Gf.Vec3d(*pos))
@@ -225,11 +241,13 @@ class VolleyballCourt:
     
     def create_net(self):
         """创建球网"""
+        ox, oy, oz = self.origin
+        
         # 球网主体
-        net = UsdGeom.Cube.Define(self.stage, Sdf.Path("/World/Net/Mesh"))
+        net = UsdGeom.Cube.Define(self.stage, Sdf.Path(f"{self.prim_prefix}/Net/Mesh"))
         net.CreateSizeAttr(1.0)
         xf = UsdGeom.Xformable(net)
-        xf.AddTranslateOp().Set(Gf.Vec3d(0, 0, self.net_height / 2))
+        xf.AddTranslateOp().Set(Gf.Vec3d(ox, oy, oz + self.net_height / 2))
         xf.AddScaleOp().Set(Gf.Vec3f(DEFAULT_NET_THICKNESS, self.court_width + 1.0, self.net_height))
         
         net_mat = self._create_visual_material("NetMat", (0.15, 0.15, 0.15), roughness=0.9)
@@ -239,10 +257,10 @@ class VolleyballCourt:
             UsdPhysics.CollisionAPI.Apply(net.GetPrim())
         
         # 顶带
-        top = UsdGeom.Cube.Define(self.stage, Sdf.Path("/World/Net/TopBand"))
+        top = UsdGeom.Cube.Define(self.stage, Sdf.Path(f"{self.prim_prefix}/Net/TopBand"))
         top.CreateSizeAttr(1.0)
         xf2 = UsdGeom.Xformable(top)
-        xf2.AddTranslateOp().Set(Gf.Vec3d(0, 0, self.net_height + 0.035))
+        xf2.AddTranslateOp().Set(Gf.Vec3d(ox, oy, oz + self.net_height + 0.035))
         xf2.AddScaleOp().Set(Gf.Vec3f(DEFAULT_NET_THICKNESS + 0.02, self.court_width + 1.0, 0.07))
         
         top_mat = self._create_visual_material("TopBandMat", (0.95, 0.95, 0.95), roughness=0.8)
@@ -252,13 +270,13 @@ class VolleyballCourt:
         pole_mat = self._create_visual_material("PoleMat", (0.6, 0.6, 0.65), roughness=0.3, metallic=0.8)
         pole_h = self.net_height + 0.3
         
-        for i, y in enumerate([-(self.court_width/2 + 0.5), (self.court_width/2 + 0.5)]):
-            pole = UsdGeom.Cylinder.Define(self.stage, Sdf.Path(f"/World/Net/Pole{i}"))
+        for i, y_offset in enumerate([-(self.court_width/2 + 0.5), (self.court_width/2 + 0.5)]):
+            pole = UsdGeom.Cylinder.Define(self.stage, Sdf.Path(f"{self.prim_prefix}/Net/Pole{i}"))
             pole.CreateRadiusAttr(0.04)
             pole.CreateHeightAttr(pole_h)
             pole.CreateAxisAttr("Z")
             xf = UsdGeom.Xformable(pole)
-            xf.AddTranslateOp().Set(Gf.Vec3d(0, y, pole_h/2))
+            xf.AddTranslateOp().Set(Gf.Vec3d(ox, oy + y_offset, oz + pole_h/2))
             UsdShade.MaterialBindingAPI(pole).Bind(pole_mat)
     
     # ===== 碰网检测 =====
