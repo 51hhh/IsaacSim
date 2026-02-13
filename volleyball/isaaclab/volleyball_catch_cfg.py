@@ -168,14 +168,13 @@ class VolleyballCatchEnvCfg(DirectRLEnvCfg):
     rew_miss_base = -10.0
     rew_miss_dist_scale = -5.0
     rew_timeout = -20.0
-    rew_position_close = 2.0
-    rew_position_medium = 1.0
-    rew_position_far = 0.5
+    rew_dist_exp_scale = 2.0      # 指数距离奖励系数
+    rew_dist_max = 3.0            # 最大距离奖励
     rew_approach_scale = 2.0
-    rew_wait = 0.5
     rew_time_penalty = -0.02
-    rew_boundary = -5.0
+    rew_boundary = -10.0          # 出界惩罚（增加）
     rew_net_collision = -5.0
+    rew_robot_ball_collision = -3.0  # 车球非接球碰撞惩罚
 
     catch_height_margin = 0.20
     catch_radius = ROBOT_CATCH_RADIUS

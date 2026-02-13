@@ -323,6 +323,7 @@ class VolleyballCatchEnv(DirectRLEnv):
         ball_pos = self.ball.data.root_pos_w
         ball_vel = self.ball.data.root_lin_vel_w
         robot_pos = self.robot.data.root_pos_w
+        robot_vel = self.robot.data.root_lin_vel_w
         
         pred_land = self.predicted_landing
         dist_to_land = torch.norm(pred_land - robot_pos[:, :2], dim=-1)
@@ -332,55 +333,117 @@ class VolleyballCatchEnv(DirectRLEnv):
         
         reward = torch.zeros(self.num_envs, device=self.device)
         
+        # ========== 终止条件检测 ==========
         catch_height_thresh = robot_z + self.cfg.catch_height_margin
         grounded = ball_z < self.cfg.ground_threshold
         
+        # 接球成功：球在接球高度范围内且在接球半径内
         caught = (ball_z <= catch_height_thresh) & (ball_z > self.cfg.ground_threshold) & (dist_to_ball < self.cfg.catch_radius)
-        reward = torch.where(caught, torch.full_like(reward, self.cfg.rew_catch), reward)
         
+        # 接球失败：球触地但未接住
         missed = grounded & ~caught
-        miss_penalty = self.cfg.rew_miss_base + self.cfg.rew_miss_dist_scale * dist_to_ball
-        reward = torch.where(missed, miss_penalty, reward)
         
-        ongoing = ~caught & ~missed
-        
-        position_reward = torch.where(
-            dist_to_land < 0.5,
-            torch.full_like(reward, self.cfg.rew_position_close),
-            torch.where(
-                dist_to_land < 1.0,
-                torch.full_like(reward, self.cfg.rew_position_medium),
-                torch.where(
-                    dist_to_land < 2.0,
-                    torch.full_like(reward, self.cfg.rew_position_far),
-                    -dist_to_land * 0.1
-                )
-            )
+        # ========== 非线性指数距离奖励 ==========
+        # 公式: r = r_max * exp(-scale * distance)
+        # 越接近落点，奖励增长越快（非线性）
+        dist_reward = self.cfg.rew_dist_max * torch.exp(
+            -self.cfg.rew_dist_exp_scale * dist_to_land
         )
         
+        # ========== 接近奖励 ==========
+        # 计算向落点移动的进度
         approach_reward = (self._prev_dist - dist_to_land) * self.cfg.rew_approach_scale
         approach_reward = torch.clamp(approach_reward, -1.0, 1.0)
         
-        wait_reward = torch.where(
-            dist_to_land < 0.5,
-            torch.full_like(reward, self.cfg.rew_wait),
-            torch.zeros_like(reward)
-        )
-        
+        # ========== 时间惩罚 ==========
         time_penalty = torch.full_like(reward, self.cfg.rew_time_penalty)
         
+        # ========== 出界惩罚 ==========
         robot_out = (
             (robot_pos[:, 0] < self.cfg.robot_bounds_x[0]) |
             (robot_pos[:, 0] > self.cfg.robot_bounds_x[1]) |
             (robot_pos[:, 1] < self.cfg.robot_bounds_y[0]) |
             (robot_pos[:, 1] > self.cfg.robot_bounds_y[1])
         )
-        boundary_penalty = torch.where(robot_out, torch.full_like(reward, self.cfg.rew_boundary), torch.zeros_like(reward))
+        boundary_penalty = torch.where(
+            robot_out, 
+            torch.full_like(reward, self.cfg.rew_boundary), 
+            torch.zeros_like(reward)
+        )
         
-        ongoing_reward = position_reward + approach_reward + wait_reward + time_penalty + boundary_penalty
-        reward = torch.where(ongoing, ongoing_reward, reward)
+        # ========== 碰网惩罚 ==========
+        net_collision = self._check_net_collision(robot_pos)
+        net_penalty = torch.where(
+            net_collision,
+            torch.full_like(reward, self.cfg.rew_net_collision),
+            torch.zeros_like(reward)
+        )
+        
+        # ========== 车球碰撞惩罚（非接球情况）==========
+        robot_ball_collision = self._check_robot_ball_collision(
+            robot_pos, ball_pos, dist_to_ball, caught
+        )
+        collision_penalty = torch.where(
+            robot_ball_collision,
+            torch.full_like(reward, self.cfg.rew_robot_ball_collision),
+            torch.zeros_like(reward)
+        )
+        
+        # ========== 汇总持续奖励 ==========
+        ongoing_reward = (
+            dist_reward + 
+            approach_reward + 
+            time_penalty + 
+            boundary_penalty + 
+            net_penalty + 
+            collision_penalty
+        )
+        
+        # ========== 终止奖励/惩罚 ==========
+        # 成功接球
+        reward = torch.where(caught, torch.full_like(reward, self.cfg.rew_catch), reward)
+        
+        # 未接住（球触地）
+        miss_penalty = self.cfg.rew_miss_base + self.cfg.rew_miss_dist_scale * dist_to_ball
+        reward = torch.where(missed, miss_penalty, reward)
+        
+        # 持续回合奖励
+        ongoing_mask = ~caught & ~missed
+        reward = torch.where(ongoing_mask, ongoing_reward, reward)
         
         return reward
+
+    def _check_net_collision(self, robot_pos: torch.Tensor) -> torch.Tensor:
+        """检测机器人是否与球网碰撞"""
+        # 球网在 x=0，宽度为 court_width + 1.0，高度 net_height
+        net_x_range = 0.3  # 网厚度 + 机器人半径
+        net_y_range = (self.cfg.court_width / 2) + 0.5
+        net_height = self.cfg.net_height
+        
+        # 检查机器人在网区域内
+        net_collision = (
+            (robot_pos[:, 0].abs() < net_x_range) &
+            (robot_pos[:, 1].abs() < net_y_range) &
+            (robot_pos[:, 2] < net_height)
+        )
+        return net_collision
+
+    def _check_robot_ball_collision(
+        self, 
+        robot_pos: torch.Tensor, 
+        ball_pos: torch.Tensor,
+        dist_to_ball: torch.Tensor,
+        caught: torch.Tensor
+    ) -> torch.Tensor:
+        """检测机器人与球的非接球碰撞"""
+        # 机器人半径约 0.3m，球半径 0.105m
+        robot_radius = 0.3
+        ball_radius = 0.105
+        collision_dist = robot_radius + ball_radius
+        
+        # 碰撞检测：距离小于碰撞距离且不是成功接球
+        collision = (dist_to_ball < collision_dist) & ~caught
+        return collision
 
     def _get_dones(self) -> tuple[torch.Tensor, torch.Tensor]:
         ball_pos = self.ball.data.root_pos_w
@@ -407,7 +470,10 @@ class VolleyballCatchEnv(DirectRLEnv):
             (robot_pos[:, 1] > self.cfg.robot_bounds_y[1])
         )
         
-        terminated = caught | grounded | ball_out | robot_out
+        # 添加碰网检测作为终止条件
+        net_collision = self._check_net_collision(robot_pos)
+        
+        terminated = caught | grounded | ball_out | robot_out | net_collision
         truncated = self.episode_length_buf >= self.max_episode_length
         
         return terminated, truncated
