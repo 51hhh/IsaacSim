@@ -26,7 +26,7 @@ runner:
   # Actor 网络配置
   actor:
     class_name: MLPModel
-    hidden_dims: [128, 128]  # 2 层 MLP，每层 128 节点
+    hidden_dims: [256, 256, 128]  # 3 层 MLP，更大容量
     activation: elu
     obs_normalization: true   # 启用观察归一化
     stochastic: true         # 随机策略
@@ -37,7 +37,7 @@ runner:
   # Critic 网络配置
   critic:
     class_name: MLPModel
-    hidden_dims: [128, 128]
+    hidden_dims: [256, 256, 128]  # 3 层 MLP，更大容量
     activation: elu
     obs_normalization: true
     stochastic: false        # Critic 是确定性的
