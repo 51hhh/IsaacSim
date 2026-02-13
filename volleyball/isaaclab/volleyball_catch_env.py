@@ -505,8 +505,8 @@ class VolleyballCatchEnv(DirectRLEnv):
         ball_vel[:, 2] = serve_speed_z  # z方向速度
         
         # 添加随机扰动（模拟深度相机噪声，小幅度）
-        # 只在训练时添加，用于增强鲁棒性
-        if self.training:
+        # 通过配置控制是否添加扰动
+        if hasattr(self.cfg, 'enable_ball_perturbation') and self.cfg.enable_ball_perturbation:
             vel_noise_std = 0.1  # 速度扰动标准差
             ball_vel[:, 0] += torch.empty(num_reset, device=self.device).normal_(0, vel_noise_std)
             ball_vel[:, 2] += torch.empty(num_reset, device=self.device).normal_(0, vel_noise_std)

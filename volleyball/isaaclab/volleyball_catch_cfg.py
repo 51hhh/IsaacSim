@@ -188,3 +188,4 @@ class VolleyballCatchEnvCfg(DirectRLEnvCfg):
     
     # 场地碰撞设置
     enable_net_collision = True  # 是否启用球网碰撞（与 Sim 版本一致）
+    enable_ball_perturbation = False  # 是否启用发球扰动（训练时设为True）
