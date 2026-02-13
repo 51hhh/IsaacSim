@@ -41,20 +41,18 @@ class VolleyballCatchEnv(DirectRLEnv):
         self.ball = RigidObject(self.cfg.ball_cfg)
         self.scene.rigid_objects["ball"] = self.ball
         
-        ground_cfg = sim_utils.GroundPlaneCfg()
-        ground_cfg.func("/World/ground", ground_cfg)
-        
-        self._create_court_visuals()
+        # 创建完整排球场（与原始 Sim 版本一致）
+        self._create_court_scene()
         
         self.scene.clone_environments(copy_from_source=False)
         
         light_cfg = sim_utils.DomeLightCfg(intensity=2000.0, color=(0.75, 0.75, 0.75))
         light_cfg.func("/World/Light", light_cfg)
 
-    def _create_court_visuals(self):
-        """使用 USD API 创建场地视觉元素"""
+    def _create_court_scene(self):
+        """创建完整排球场场景（与原始 Sim 版本一致）"""
         import omni.usd
-        from pxr import Gf, Sdf, UsdGeom, UsdShade
+        from pxr import Gf, Sdf, UsdGeom, UsdShade, UsdPhysics
         
         stage = omni.usd.get_context().get_stage()
         
@@ -62,6 +60,8 @@ class VolleyballCatchEnv(DirectRLEnv):
         court_width = self.cfg.court_width
         net_height = self.cfg.net_height
         
+        # ==================== 创建材质 ====================
+        # 场地材质（木地板色）
         court_mat = UsdShade.Material.Define(stage, Sdf.Path("/Materials/CourtMat"))
         court_shader = UsdShade.Shader.Define(stage, Sdf.Path("/Materials/CourtMat/Shader"))
         court_shader.CreateIdAttr("UsdPreviewSurface")
@@ -69,6 +69,7 @@ class VolleyballCatchEnv(DirectRLEnv):
         court_shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.7)
         court_mat.CreateSurfaceOutput().ConnectToSource(court_shader.ConnectableAPI(), "surface")
         
+        # 边线材质（白色）
         line_mat = UsdShade.Material.Define(stage, Sdf.Path("/Materials/LineMat"))
         line_shader = UsdShade.Shader.Define(stage, Sdf.Path("/Materials/LineMat/Shader"))
         line_shader.CreateIdAttr("UsdPreviewSurface")
@@ -76,6 +77,7 @@ class VolleyballCatchEnv(DirectRLEnv):
         line_shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.9)
         line_mat.CreateSurfaceOutput().ConnectToSource(line_shader.ConnectableAPI(), "surface")
         
+        # 球网材质
         net_mat = UsdShade.Material.Define(stage, Sdf.Path("/Materials/NetMat"))
         net_shader = UsdShade.Shader.Define(stage, Sdf.Path("/Materials/NetMat/Shader"))
         net_shader.CreateIdAttr("UsdPreviewSurface")
@@ -83,34 +85,15 @@ class VolleyballCatchEnv(DirectRLEnv):
         net_shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.9)
         net_mat.CreateSurfaceOutput().ConnectToSource(net_shader.ConnectableAPI(), "surface")
         
-        court = UsdGeom.Cube.Define(stage, Sdf.Path("/World/CourtSurface"))
-        xform = UsdGeom.Xformable(court)
-        xform.AddTranslateOp().Set(Gf.Vec3d(0, 0, 0.005))
-        xform.AddScaleOp().Set(Gf.Vec3f(court_length, court_width, 0.01))
-        UsdShade.MaterialBindingAPI(court).Bind(court_mat)
+        # 顶带材质（白色）
+        top_band_mat = UsdShade.Material.Define(stage, Sdf.Path("/Materials/TopBandMat"))
+        top_band_shader = UsdShade.Shader.Define(stage, Sdf.Path("/Materials/TopBandMat/Shader"))
+        top_band_shader.CreateIdAttr("UsdPreviewSurface")
+        top_band_shader.CreateInput("diffuseColor", Sdf.ValueTypeNames.Color3f).Set(Gf.Vec3f(0.95, 0.95, 0.95))
+        top_band_shader.CreateInput("roughness", Sdf.ValueTypeNames.Float).Set(0.8)
+        top_band_mat.CreateSurfaceOutput().ConnectToSource(top_band_shader.ConnectableAPI(), "surface")
         
-        line_width = 0.05
-        lines = [
-            ("/World/LineN", (0, court_width / 2, 0.02), (court_length, line_width, 0.01)),
-            ("/World/LineS", (0, -court_width / 2, 0.02), (court_length, line_width, 0.01)),
-            ("/World/LineE", (court_length / 2, 0, 0.02), (line_width, court_width, 0.01)),
-            ("/World/LineW", (-court_length / 2, 0, 0.02), (line_width, court_width, 0.01)),
-            ("/World/LineMid", (0, 0, 0.02), (line_width, court_width, 0.01)),
-        ]
-        
-        for path, pos, scale in lines:
-            line = UsdGeom.Cube.Define(stage, Sdf.Path(path))
-            xform = UsdGeom.Xformable(line)
-            xform.AddTranslateOp().Set(Gf.Vec3d(*pos))
-            xform.AddScaleOp().Set(Gf.Vec3f(*scale))
-            UsdShade.MaterialBindingAPI(line).Bind(line_mat)
-        
-        net = UsdGeom.Cube.Define(stage, Sdf.Path("/World/Net"))
-        xform = UsdGeom.Xformable(net)
-        xform.AddTranslateOp().Set(Gf.Vec3d(0, 0, net_height / 2))
-        xform.AddScaleOp().Set(Gf.Vec3f(0.05, court_width + 1.0, net_height))
-        UsdShade.MaterialBindingAPI(net).Bind(net_mat)
-        
+        # 网柱材质（金属色）
         pole_mat = UsdShade.Material.Define(stage, Sdf.Path("/Materials/PoleMat"))
         pole_shader = UsdShade.Shader.Define(stage, Sdf.Path("/Materials/PoleMat/Shader"))
         pole_shader.CreateIdAttr("UsdPreviewSurface")
@@ -119,16 +102,98 @@ class VolleyballCatchEnv(DirectRLEnv):
         pole_shader.CreateInput("metallic", Sdf.ValueTypeNames.Float).Set(0.8)
         pole_mat.CreateSurfaceOutput().ConnectToSource(pole_shader.ConnectableAPI(), "surface")
         
+        # 地板物理材质（与 Sim 版本一致）
+        ground_phys_mat = UsdShade.Material.Define(stage, Sdf.Path("/Materials/GroundPhysMat"))
+        ground_phys = UsdPhysics.MaterialAPI.Apply(ground_phys_mat.GetPrim())
+        ground_phys.CreateStaticFrictionAttr(0.6)
+        ground_phys.CreateDynamicFrictionAttr(0.5)
+        ground_phys.CreateRestitutionAttr(0.75)
+        
+        # ==================== 创建地面平面（物理）====================
+        # 使用 PhysicsSchemaTools 创建地面（与 Sim 版本一致）
+        from pxr import PhysicsSchemaTools
+        PhysicsSchemaTools.addGroundPlane(
+            stage, "/groundPlane", 
+            "Z", 
+            1500,  # 大小
+            Gf.Vec3f(0, 0, 0),  # 位置
+            Gf.Vec3f(0.15, 0.15, 0.15)  # 颜色
+        )
+        
+        # 绑定物理材质到地面
+        ground_geom = stage.GetPrimAtPath("/groundPlane/geom")
+        if ground_geom.IsValid():
+            phys_binding = UsdShade.MaterialBindingAPI.Apply(ground_geom)
+            phys_binding.Bind(ground_phys_mat, UsdShade.Tokens.weakerThanDescendants, "physics")
+        
+        # ==================== 创建排球场地面（视觉）====================
+        court = UsdGeom.Cube.Define(stage, Sdf.Path("/World/Court"))
+        court.CreateSizeAttr(1.0)
+        xf = UsdGeom.Xformable(court)
+        xf.AddTranslateOp().Set(Gf.Vec3d(0, 0, 0.005))
+        xf.AddScaleOp().Set(Gf.Vec3f(court_length, court_width, 0.01))
+        UsdShade.MaterialBindingAPI(court).Bind(court_mat)
+        
+        # 添加碰撞
+        UsdPhysics.CollisionAPI.Apply(court.GetPrim())
+        phys_binding = UsdShade.MaterialBindingAPI.Apply(court.GetPrim())
+        phys_binding.Bind(ground_phys_mat, UsdShade.Tokens.weakerThanDescendants, "physics")
+        
+        # ==================== 创建边线（与 Sim 版本一致）====================
+        line_width = 0.05
+        lw = line_width
+        ox, oy, oz = 0.0, 0.0, 0.0
+        
+        lines = [
+            ("LineN", (ox, oy + court_width/2, oz + 0.015), (court_length, lw, 0.005)),
+            ("LineS", (ox, oy - court_width/2, oz + 0.015), (court_length, lw, 0.005)),
+            ("LineE", (ox + court_length/2, oy, oz + 0.015), (lw, court_width, 0.005)),
+            ("LineW", (ox - court_length/2, oy, oz + 0.015), (lw, court_width, 0.005)),
+            ("LineMid", (ox, oy, oz + 0.015), (lw, court_width, 0.005)),
+        ]
+        
+        for name, pos, scale in lines:
+            line = UsdGeom.Cube.Define(stage, Sdf.Path(f"/World/{name}"))
+            line.CreateSizeAttr(1.0)
+            xf = UsdGeom.Xformable(line)
+            xf.AddTranslateOp().Set(Gf.Vec3d(*pos))
+            xf.AddScaleOp().Set(Gf.Vec3f(*scale))
+            UsdShade.MaterialBindingAPI(line).Bind(line_mat)
+        
+        # ==================== 创建球网（与 Sim 版本一致）====================
+        net_thickness = 0.05
+        
+        # 球网主体
+        net = UsdGeom.Cube.Define(stage, Sdf.Path("/World/Net/Mesh"))
+        net.CreateSizeAttr(1.0)
+        xf = UsdGeom.Xformable(net)
+        xf.AddTranslateOp().Set(Gf.Vec3d(ox, oy, oz + net_height / 2))
+        xf.AddScaleOp().Set(Gf.Vec3f(net_thickness, court_width + 1.0, net_height))
+        UsdShade.MaterialBindingAPI(net).Bind(net_mat)
+        
+        # 启用球网碰撞（与配置一致）
+        if hasattr(self.cfg, 'enable_net_collision') and self.cfg.enable_net_collision:
+            UsdPhysics.CollisionAPI.Apply(net.GetPrim())
+        
+        # 顶带（白色边）
+        top_band = UsdGeom.Cube.Define(stage, Sdf.Path("/World/Net/TopBand"))
+        top_band.CreateSizeAttr(1.0)
+        xf2 = UsdGeom.Xformable(top_band)
+        xf2.AddTranslateOp().Set(Gf.Vec3d(ox, oy, oz + net_height + 0.035))
+        xf2.AddScaleOp().Set(Gf.Vec3f(net_thickness + 0.02, court_width + 1.0, 0.07))
+        UsdShade.MaterialBindingAPI(top_band).Bind(top_band_mat)
+        
+        # 网柱
         pole_radius = 0.04
         pole_height = net_height + 0.3
         
-        for i, y_offset in enumerate([-(court_width / 2 + 0.5), (court_width / 2 + 0.5)]):
+        for i, y_offset in enumerate([-(court_width/2 + 0.5), (court_width/2 + 0.5)]):
             pole = UsdGeom.Cylinder.Define(stage, Sdf.Path(f"/World/Net/Pole{i}"))
             pole.CreateRadiusAttr(pole_radius)
             pole.CreateHeightAttr(pole_height)
             pole.CreateAxisAttr("Z")
-            xform = UsdGeom.Xformable(pole)
-            xform.AddTranslateOp().Set(Gf.Vec3d(0, y_offset, pole_height / 2))
+            xf = UsdGeom.Xformable(pole)
+            xf.AddTranslateOp().Set(Gf.Vec3d(ox, oy + y_offset, oz + pole_height/2))
             UsdShade.MaterialBindingAPI(pole).Bind(pole_mat)
 
     def _pre_physics_step(self, actions: torch.Tensor):

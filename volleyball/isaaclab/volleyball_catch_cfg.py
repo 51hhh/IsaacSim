@@ -186,3 +186,6 @@ class VolleyballCatchEnvCfg(DirectRLEnvCfg):
     net_height = NET_HEIGHT
     robot_bounds_x = ROBOT_BOUNDS_X
     robot_bounds_y = ROBOT_BOUNDS_Y
+    
+    # 场地碰撞设置
+    enable_net_collision = True  # 是否启用球网碰撞（与 Sim 版本一致）
