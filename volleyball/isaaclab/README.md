@@ -72,11 +72,10 @@ C:\IsaacSim\python.bat train.py --num_envs 256 --max_iterations 5000 --headless
 C:\IsaacSim\python.bat train.py --num_envs 64 --checkpoint logs/volleyball_catch/2025-01-01_12-00-00/model.pt
 ```
 
-### 3. 评估/播放
+### 3. tensorboard
 
-```powershell
-C:\IsaacSim\python.bat play.py --checkpoint logs/volleyball_catch/latest/model.pt --num_envs 4
-```
+C:\IsaacSim\python.bat -m tensorboard.main --logdir=volleyball\isaaclab\logs\volleyball_catch\2026-02-13_15-56-02
+
 
 ## 配置参数
 
