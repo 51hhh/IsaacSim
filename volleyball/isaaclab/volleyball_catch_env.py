@@ -484,38 +484,34 @@ class VolleyballCatchEnv(DirectRLEnv):
         num_reset = len(env_ids)
         
         # ========== 固定发球参数（诱导学习）==========
-        # 所有环境使用相同的固定发球位置和速度
-        serve_x = self.cfg.ball_cfg.init_state.pos[0]  # SERVE_X
+        # 使用配置中的固定发球参数
+        serve_x = self.cfg.ball_cfg.init_state.pos[0]  # SERVE_X = -10.0
         serve_y = 0.0  # 固定 Y=0（场地中心）
-        serve_z = self.cfg.ball_cfg.init_state.pos[2]  # SERVE_HEIGHT
+        serve_z = self.cfg.ball_cfg.init_state.pos[2]  # SERVE_HEIGHT = 3.5
         
-        serve_speed = self.cfg.ball_cfg.init_state.lin_vel[0]  # SERVE_SPEED
-        serve_angle_rad = math.radians(20.0)  # 固定 20 度角
+        # 从配置读取发球速度（与原来一致）
+        serve_speed_x = self.cfg.ball_cfg.init_state.lin_vel[0]  # SERVE_SPEED = 15.0
+        serve_speed_z = self.cfg.ball_cfg.init_state.lin_vel[2]  # SERVE_SPEED * sin(20°)
         
-        # 基础发球位置（固定）
+        # 固定发球位置
         ball_pos = torch.zeros(num_reset, 3, device=self.device)
         ball_pos[:, 0] = serve_x
         ball_pos[:, 1] = serve_y
         ball_pos[:, 2] = serve_z
         
-        # ========== 添加排球随机扰动（模拟深度相机噪声）==========
-        # 模拟深度相机获取排球坐标的随机误差
-        pos_noise_std = 0.05  # 位置扰动标准差 (5cm)
-        ball_pos[:, 0] += torch.empty(num_reset, device=self.device).normal_(0, pos_noise_std)
-        ball_pos[:, 1] += torch.empty(num_reset, device=self.device).normal_(0, pos_noise_std)
-        ball_pos[:, 2] += torch.empty(num_reset, device=self.device).normal_(0, pos_noise_std)
-        
-        # 固定发球初速度
+        # 固定发球速度（与配置一致）
         ball_vel = torch.zeros(num_reset, 3, device=self.device)
-        ball_vel[:, 0] = serve_speed * math.cos(serve_angle_rad)  # x 方向
-        ball_vel[:, 2] = serve_speed * math.sin(serve_angle_rad)  # z 方向
+        ball_vel[:, 0] = serve_speed_x  # x方向速度
+        ball_vel[:, 2] = serve_speed_z  # z方向速度
         
-        # 添加速度随机扰动
-        vel_noise_std = 0.2  # 速度扰动标准差
-        ball_vel[:, 0] += torch.empty(num_reset, device=self.device).normal_(0, vel_noise_std)
-        ball_vel[:, 2] += torch.empty(num_reset, device=self.device).normal_(0, vel_noise_std)
+        # 添加随机扰动（模拟深度相机噪声，小幅度）
+        # 只在训练时添加，用于增强鲁棒性
+        if self.training:
+            vel_noise_std = 0.1  # 速度扰动标准差
+            ball_vel[:, 0] += torch.empty(num_reset, device=self.device).normal_(0, vel_noise_std)
+            ball_vel[:, 2] += torch.empty(num_reset, device=self.device).normal_(0, vel_noise_std)
         
-        # 无旋转（固定）
+        # 无旋转
         ball_ang_vel = torch.zeros(num_reset, 3, device=self.device)
         
         # 应用排球初始状态
@@ -527,16 +523,19 @@ class VolleyballCatchEnv(DirectRLEnv):
         self.ball.write_root_state_to_sim(default_ball_state, env_ids)
         
         # ========== 固定机器人初始位置（接发球区域）==========
-        # 所有环境从相同位置开始（场地坐标：X=5m, Y=4.5m）
-        robot_x = torch.full((num_reset,), 5.0, device=self.device)  # 世界坐标：5.0
-        robot_y = torch.full((num_reset,), 4.5, device=self.device)  # 世界坐标：0.0（场地中心）
+        # 所有环境从相同位置开始（世界坐标：X=5m, Y=0m）
+        robot_x = torch.full((num_reset,), 5.0, device=self.device)
+        robot_y = torch.full((num_reset,), 0.0, device=self.device)  # 修正：原来是4.5
         
         default_robot_state = self.robot.data.default_root_state[env_ids]
         default_robot_state[:, 0] = robot_x
         default_robot_state[:, 1] = robot_y
         default_robot_state[:, 2] = self.cfg.robot_cfg.init_state.pos[2]
-        default_robot_state[:, 3:7] = 0.0  # 朝向（四元数）设为0
-        default_robot_state[:, 3] = 1.0    # w=1 表示无旋转（正对球网）
+        # 设置朝向：正对球网（X轴正方向）
+        default_robot_state[:, 3] = 1.0   # w
+        default_robot_state[:, 4] = 0.0   # x
+        default_robot_state[:, 5] = 0.0   # y
+        default_robot_state[:, 6] = 0.0   # z
         default_robot_state[:, 7:13] = 0.0  # 速度为0
         
         self.robot.write_root_state_to_sim(default_robot_state, env_ids)
