@@ -134,7 +134,7 @@ class VolleyballCatchEnvCfg(DirectRLEnvCfg):
     decimation = 6
     episode_length_s = 6.0
     action_space = 2
-    observation_space = 8
+    observation_space = 9
     state_space = 0
 
     sim: SimulationCfg = SimulationCfg(

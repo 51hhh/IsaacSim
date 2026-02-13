@@ -249,6 +249,8 @@ class VolleyballCatchEnv(DirectRLEnv):
         ball_vel = self.ball.data.root_lin_vel_w
         robot_pos = self.robot.data.root_pos_w
         robot_vel = self.robot.data.root_lin_vel_w
+        robot_ang_vel = self.robot.data.root_ang_vel_w
+        robot_quat = self.robot.data.root_quat_w
         
         pred_land = self._predict_landing_point(ball_pos, ball_vel)
         self.predicted_landing = pred_land
@@ -256,13 +258,31 @@ class VolleyballCatchEnv(DirectRLEnv):
         t_land = self._calc_time_to_landing(ball_pos, ball_vel)
         self.time_to_landing = t_land
         
+        # 计算机器人偏航角 Wz (从四元数)
+        robot_yaw = torch.atan2(
+            2.0 * (robot_quat[:, 3] * robot_quat[:, 2] + robot_quat[:, 0] * robot_quat[:, 1]),
+            1.0 - 2.0 * (robot_quat[:, 1] ** 2 + robot_quat[:, 2] ** 2)
+        )
+        
+        # 计算偏航角速度 Vyaw (Z轴角速度)
+        robot_Vyaw = robot_ang_vel[:, 2]
+        
+        # 转换为场地坐标系 (左后角为原点)
+        # 世界坐标: 中心在 (0,0)，场地坐标: 左后角在 (0,0)
+        robot_x_court = robot_pos[:, 0] + self.cfg.court_length / 2
+        robot_y_court = robot_pos[:, 1] + self.cfg.court_width / 2
+        
+        # 9维观察空间
         obs = torch.cat([
-            pred_land[:, 0:1] - robot_pos[:, 0:1],
-            pred_land[:, 1:2] - robot_pos[:, 1:2],
-            t_land.unsqueeze(-1),
-            robot_pos[:, 0:2],
-            robot_vel[:, 0:2],
-            ball_pos[:, 2:3],
+            pred_land[:, 0:1] - robot_pos[:, 0:1],  # [0] rel_x
+            pred_land[:, 1:2] - robot_pos[:, 1:2],  # [1] rel_y
+            t_land.unsqueeze(-1),                    # [2] time_to_land
+            robot_x_court.unsqueeze(-1),             # [3] robot_x (场地坐标)
+            robot_y_court.unsqueeze(-1),             # [4] robot_y (场地坐标)
+            robot_yaw.unsqueeze(-1),                 # [5] robot_yaw (Wz)
+            robot_vel[:, 0:1],                       # [6] robot_vx
+            robot_vel[:, 1:2],                       # [7] robot_vy
+            robot_Vyaw.unsqueeze(-1),                # [8] robot_Vyaw
         ], dim=-1)
         
         self._prev_dist = torch.norm(
